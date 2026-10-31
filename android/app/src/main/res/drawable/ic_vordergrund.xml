@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Gelbes Preisschild mit Barcode -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#F2C94C"
+        android:fillType="evenOdd"
+        android:pathData="M28,54 L40,40 L76,40 Q80,40 80,44 L80,64 Q80,68 76,68 L40,68 Z M37,54 m-3,0 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0 Z" />
+    <path
+        android:fillColor="#2A2205"
+        android:pathData="M46,46h2v16h-2z M50,46h1v16h-1z M53,46h3v16h-3z M58,46h1v16h-1z M61,46h2v16h-2z M65,46h1v16h-1z M68,46h3v16h-3z M73,46h1v16h-1z" />
+</vector>

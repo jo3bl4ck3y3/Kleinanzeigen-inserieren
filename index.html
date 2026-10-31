@@ -191,7 +191,7 @@ footer { display: flex; justify-content: flex-end; gap: 16px; color: var(--muted
     <button id="neu">Neue Anzeige beginnen</button>
   </section>
 
-  <footer><span>Version 1.2</span><span>erstellt von<br>Dirk Bünder</span></footer>
+  <footer><span>Version 1.3</span><span>erstellt von<br>Dirk Bünder</span></footer>
 </div>
 
 <div class="aktionen">
@@ -315,7 +315,13 @@ function melde(text) {
   clearTimeout(toastUhr); toastUhr = setTimeout(() => t.hidden = true, 2400);
 }
 
+// In der Android-App stellt die App diese Brücke bereit (Scanner, Zwischenablage, Teilen)
+const APP = window.AndroidApp || null;
+
 async function kopiere(text, was) {
+  if (APP && APP.copy) {
+    try { if (APP.copy(text, was)) return melde(`${was} kopiert`); } catch (e) {}
+  }
   try {
     await navigator.clipboard.writeText(text);
     melde(`${was} kopiert`);
@@ -369,7 +375,7 @@ $('neu').addEventListener('click', () => {
 
 // ---------- Fotos ----------
 let fotos = []; // {datei, url}
-const kannTeilen = f => { try { return !!navigator.canShare && navigator.canShare({ files: f }); } catch (e) { return false; } };
+const kannTeilen = f => { if (APP && APP.shareImages) return true; try { return !!navigator.canShare && navigator.canShare({ files: f }); } catch (e) { return false; } };
 
 $('foto-wahl').addEventListener('change', e => {
   const neu = [...e.target.files];
@@ -402,6 +408,12 @@ function zeigeFotos() {
 }
 
 $('fotos-teilen').addEventListener('click', async () => {
+  if (APP && APP.shareImages) {
+    const liste = JSON.stringify(fotos.map(f => ({ name: f.datei.name, size: f.datei.size })));
+    if (APP.shareImages(liste, $('titel').value.trim()) !== 'ok')
+      melde('Teilen nicht möglich – bitte die Fotos neu auswählen.');
+    return;
+  }
   try {
     await navigator.share({ files: fotos.map(f => f.datei), title: $('titel').value.trim() });
   } catch (e) {
@@ -515,7 +527,19 @@ function umschalten(knopf, wert) {
 }
 $('scan-licht').addEventListener('click', e => umschalten(e.currentTarget, an => ({ torch: an })));
 $('scan-zoom').addEventListener('click', e => umschalten(e.currentTarget, (an, cap) => ({ zoom: an ? 2 : (cap.zoom.min || 1) })));
-$('scan-start').addEventListener('click', scanStart);
+$('scan-start').addEventListener('click', () => {
+  if (APP && APP.scanBarcode) { try { return APP.scanBarcode(); } catch (e) {} }
+  scanStart();
+});
+// Antwort des nativen Scanners der Android-App
+window.nativerScan = (status, wert) => {
+  if (status === 'ok') {
+    const i = normCode(wert);
+    if (!i) return melde('Das ist kein Barcode eines Buchs, einer CD oder DVD.');
+    if (navigator.vibrate) navigator.vibrate(80);
+    nachschlagen(i);
+  } else if (status === 'fehler') melde('Scanner konnte nicht gestartet werden.');
+};
 $('scan-ende').addEventListener('click', scanStopp);
 $('scanner').addEventListener('close', scanStopp);
 document.addEventListener('visibilitychange', () => { if (document.hidden && $('scanner').open) scanStopp(); });
