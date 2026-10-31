@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="de">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kleinanzeigen inserieren</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&display=swap">
+<style>
+/* Layout: eine Spalte fürs Handy, Abschnitte als Formularblöcke, Aktionsleiste unten fest */
+:root {
+  --bg: #f3f5f1; --surface: #ffffff; --fg: #1d2420; --muted: #5d6a62; --line: #d7ddd6;
+  --accent: #1f6b4f; --accent-fg: #ffffff; --tag: #f2c94c; --tag-fg: #2a2205; --warn: #b3261e;
+  --display: "Bricolage Grotesque", "Segoe UI", Roboto, sans-serif;
+  --body: "Atkinson Hyperlegible", Roboto, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121614; --surface: #1b211e; --fg: #e6ece8; --muted: #9aa8a0; --line: #2e3833;
+  --accent: #5cc49a; --accent-fg: #0c1712; --tag: #e8c24a; --tag-fg: #241d03; --warn: #ff8a80; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #121614; --surface: #1b211e; --fg: #e6ece8; --muted: #9aa8a0; --line: #2e3833;
+  --accent: #5cc49a; --accent-fg: #0c1712; --tag: #e8c24a; --tag-fg: #241d03; --warn: #ff8a80; color-scheme: dark }
+
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--fg); font: 16px/1.5 var(--body); margin: 0 }
+.seite { max-width: 640px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 170px;
+  display: flex; flex-direction: column; gap: 18px }
+header { display: flex; align-items: center; gap: 12px }
+.preisschild { background: var(--tag); color: var(--tag-fg); font: 800 15px/1 var(--display);
+  padding: 8px 12px 8px 18px; border-radius: 4px 10px 10px 4px; position: relative; flex: none }
+.preisschild::before { content: ""; position: absolute; left: 6px; top: 50%; width: 6px; height: 6px;
+  margin-top: -3px; border-radius: 50%; background: var(--bg) }
+h1 { font: 800 1.6rem/1.1 var(--display); margin: 0; text-wrap: balance }
+h2 { font: 600 1.05rem/1.2 var(--display); margin: 0 0 4px; letter-spacing: .01em }
+section { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px;
+  display: flex; flex-direction: column; gap: 12px; min-width: 0 }
+label { display: flex; flex-direction: column; gap: 4px; font-size: .9rem; color: var(--muted); min-width: 0 }
+label > span.zeile { display: flex; justify-content: space-between; gap: 8px }
+input, select, textarea { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line);
+  border-radius: 8px; padding: 10px 12px; width: 100%; min-width: 0 }
+textarea { resize: vertical; min-height: 96px }
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible, a:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px }
+.zwei { display: grid; grid-template-columns: 1fr 1fr; gap: 12px }
+@media (max-width: 380px) { .zwei { grid-template-columns: 1fr } }
+.haken { flex-direction: row; align-items: center; gap: 10px; color: var(--fg); font-size: 1rem }
+.haken input { width: 22px; height: 22px; accent-color: var(--accent) }
+.zaehler { font-variant-numeric: tabular-nums }
+.zaehler.zuviel { color: var(--warn); font-weight: 700 }
+.hinweis { font-size: .85rem; color: var(--muted); margin: 0 }
+button, .knopf { font: 700 .95rem/1 var(--body); border-radius: 10px; padding: 12px 14px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface); color: var(--fg); text-decoration: none;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px }
+button.haupt, .knopf.haupt { background: var(--accent); color: var(--accent-fg); border-color: var(--accent) }
+button:disabled { opacity: .45; cursor: default }
+.fotos { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px }
+.foto { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; background: var(--bg);
+  border: 1px solid var(--line); max-width: 100% }
+.foto img { width: 100%; height: 100%; object-fit: cover; display: block }
+.foto .nr { position: absolute; left: 4px; top: 4px; background: var(--tag); color: var(--tag-fg);
+  font: 800 12px/1 var(--display); padding: 4px 6px; border-radius: 4px }
+.foto .leiste { position: absolute; inset: auto 0 0 0; display: flex; justify-content: space-between;
+  background: color-mix(in srgb, var(--surface) 85%, transparent) }
+.foto .leiste button { min-height: 32px; padding: 4px 8px; border: 0; background: none; border-radius: 0 }
+.vorschau { white-space: pre-wrap; background: var(--bg); border: 1px dashed var(--line); border-radius: 8px;
+  padding: 12px; font-size: .95rem; overflow-wrap: anywhere }
+.vorschau .haftung { color: var(--muted) }
+.marke { align-self: flex-start; font-size: .75rem; letter-spacing: .06em; text-transform: uppercase;
+  background: var(--tag); color: var(--tag-fg); padding: 3px 8px; border-radius: 4px; font-weight: 700 }
+.aktionen { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--line);
+  padding-top: 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+.aktionen .innen { max-width: 640px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px }
+.aktionen .knopf.haupt { grid-column: 1 / -1 }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(130px + env(safe-area-inset-bottom, 0px));
+  background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-weight: 700;
+  max-width: calc(100% - 32px); text-align: center }
+footer { display: flex; justify-content: flex-end; gap: 16px; color: var(--muted); font-size: .8rem; text-align: right }
+.knopfreihe { display: flex; gap: 8px; flex-wrap: wrap }
+.knopfreihe > * { flex: 1 1 140px }
+.isbn-zeile { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end }
+/* Scanner: Vollbild-Dialog mit Kamerabild */
+#scanner { padding: 0; border: 0; margin: 0; width: 100%; max-width: none; height: 100%; max-height: none;
+  background: #000; color: #fff }
+#scanner::backdrop { background: #000 }
+#scanner[open] { display: flex; flex-direction: column }
+.scan-bild { position: relative; flex: 1; overflow: hidden; min-height: 0 }
+.scan-bild video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover }
+.scan-rahmen { position: absolute; left: 8%; right: 8%; top: 50%; height: 26%; transform: translateY(-50%);
+  border: 3px solid var(--tag); border-radius: 12px; box-shadow: 0 0 0 100vmax rgba(0,0,0,.45) }
+.scan-rahmen.treffer { border-color: #5cc49a }
+.scan-text { position: absolute; left: 16px; right: 16px; top: max(16px, env(safe-area-inset-top, 0px));
+  text-align: center; font-weight: 700; text-shadow: 0 1px 3px #000 }
+.scan-leiste { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding: 12px 16px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); background: #000 }
+.scan-leiste button { background: #222; color: #fff; border-color: #444 }
+.scan-leiste button[aria-pressed="true"] { background: var(--tag); color: var(--tag-fg); border-color: var(--tag) }
+@media (prefers-reduced-motion: no-preference) { button { transition: transform .08s } button:active { transform: scale(.97) } }
+</style>
+
+<div class="seite">
+  <header>
+    <span class="preisschild">VB</span>
+    <h1>Kleinanzeigen inserieren</h1>
+  </header>
+
+  <section aria-labelledby="h-artikel">
+    <h2 id="h-artikel">Artikel</h2>
+    <label><span class="zeile">Titel der Anzeige <span class="zaehler" id="titel-zaehler">0 / 65</span></span>
+      <input id="titel" maxlength="65" placeholder="z. B. Damenfahrrad Gazelle 28 Zoll, 7 Gänge"></label>
+    <label>Beschreibung (freier Text)
+      <textarea id="freitext" placeholder="Was zeichnet den Artikel aus?"></textarea></label>
+  </section>
+
+  <section aria-labelledby="h-buch">
+    <h2 id="h-buch">Buch, CD, DVD, Blu-ray</h2>
+    <p class="hinweis">Barcode auf der Rückseite scannen – die Angaben werden, soweit bekannt, automatisch
+      eingetragen. Für andere Artikel einfach leer lassen.</p>
+    <button id="scan-start" class="haupt">📷 Barcode scannen</button>
+    <div class="isbn-zeile">
+      <label><span id="code-label">ISBN / EAN</span> <input id="isbn" inputmode="numeric" placeholder="978… oder 40…"></label>
+      <button id="isbn-suchen">Nachschlagen</button>
+    </div>
+    <a class="knopf" id="websuche" target="_blank" rel="noopener" hidden>🔎 Barcode im Web suchen</a>
+    <div class="zwei">
+      <label>Art
+        <select id="medium"><option value=""></option><option>Buch</option><option>CD</option><option>DVD</option>
+          <option>Blu-ray</option><option>Schallplatte</option></select></label>
+      <label><span id="l-ausgabe">Ausgabe</span> <input id="ausgabe" placeholder="z. B. 2019, 320 Seiten"></label>
+    </div>
+    <div class="zwei">
+      <label><span id="l-autor">Autor</span> <input id="autor"></label>
+      <label><span id="l-verlag">Verlag</span> <input id="verlag"></label>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-details">
+    <h2 id="h-details">Details</h2>
+    <p class="hinweis">Leere Felder erscheinen nicht in der Beschreibung.</p>
+    <div class="zwei">
+      <label>Marke / Hersteller <input id="marke"></label>
+      <label>Modell / Typ <input id="modell"></label>
+    </div>
+    <div class="zwei">
+      <label>Zustand
+        <select id="zustand"><option value=""></option><option>Neu / originalverpackt</option><option>Neuwertig</option>
+          <option>Sehr gut</option><option>Gut</option><option>In Ordnung</option><option>Defekt / für Bastler</option></select></label>
+      <label>Alter / gekauft <input id="alter" placeholder="z. B. 2021"></label>
+    </div>
+    <div class="zwei">
+      <label>Maße / Größe <input id="masse" placeholder="z. B. 28 Zoll, RH 53 cm"></label>
+      <label>Farbe <input id="farbe"></label>
+    </div>
+    <label>Lieferumfang <input id="lieferumfang"></label>
+    <label>Gebrauchsspuren / Mängel <input id="maengel"></label>
+    <label>Grund des Verkaufs <input id="grund"></label>
+  </section>
+
+  <section aria-labelledby="h-uebergabe">
+    <h2 id="h-uebergabe">Preis und Übergabe</h2>
+    <div class="zwei">
+      <label>Preis in € <input id="preis" inputmode="numeric" placeholder="z. B. 120"></label>
+      <label>Preisart
+        <select id="preisart"><option>VB</option><option>Festpreis</option><option>Zu verschenken</option></select></label>
+    </div>
+    <label>Abholung / Versand
+      <select id="versand"><option value=""></option><option>Nur Abholung.</option>
+        <option>Versand möglich (Kosten trägt der Käufer).</option>
+        <option>Abholung oder Versand möglich (Versandkosten trägt der Käufer).</option></select></label>
+    <label class="haken"><input type="checkbox" id="nichtraucher"> Nichtraucherhaushalt</label>
+    <label class="haken"><input type="checkbox" id="tierfrei"> tierfreier Haushalt</label>
+  </section>
+
+  <section aria-labelledby="h-fotos">
+    <h2 id="h-fotos">Fotos <span class="hinweis" id="foto-zaehler">(max. 20, Nr. 1 = Titelbild)</span></h2>
+    <label class="knopf"><input type="file" id="foto-wahl" accept="image/*" multiple hidden>Fotos auswählen</label>
+    <div class="fotos" id="fotos"></div>
+    <button id="fotos-teilen" class="haupt" hidden>Fotos an Kleinanzeigen teilen</button>
+    <p class="hinweis" id="foto-hinweis">Hier legen Sie Auswahl und Reihenfolge fest. In der Kleinanzeigen-App wählen Sie
+      die Fotos dann in dieser Reihenfolge aus der Galerie.</p>
+  </section>
+
+  <section aria-labelledby="h-vorschau">
+    <h2 id="h-vorschau">Vorschau der Beschreibung</h2>
+    <span class="marke" id="beispiel-marke" hidden>Beispiel</span>
+    <div class="vorschau" id="vorschau"></div>
+    <span class="hinweis zaehler" id="text-zaehler"></span>
+    <p class="hinweis">Tipp: Titel, Beschreibung und Preis nacheinander kopieren. Die Samsung-Tastatur merkt sich alle
+      drei in ihrer Zwischenablage, dort können Sie sie in der Kleinanzeigen-App einzeln einfügen.</p>
+    <button id="neu">Neue Anzeige beginnen</button>
+  </section>
+
+  <footer><span>Version 1.2</span><span>erstellt von<br>Dirk Bünder</span></footer>
+</div>
+
+<div class="aktionen">
+  <div class="innen">
+    <button id="k-titel">Titel kopieren</button>
+    <button id="k-text">Beschreibung kopieren</button>
+    <button id="k-preis">Preis kopieren</button>
+    <a class="knopf haupt" href="https://www.kleinanzeigen.de/p-anzeige-aufgeben.html" target="_blank" rel="noopener">Kleinanzeigen öffnen</a>
+  </div>
+</div>
+<dialog id="scanner" aria-label="ISBN-Scanner">
+  <div class="scan-bild">
+    <video id="scan-video" playsinline muted></video>
+    <div class="scan-rahmen" id="scan-rahmen"></div>
+    <div class="scan-text" id="scan-text">Barcode in den Rahmen halten (ca. 15–25 cm Abstand)</div>
+  </div>
+  <div class="scan-leiste">
+    <button id="scan-licht" aria-pressed="false" hidden>🔦 Licht</button>
+    <button id="scan-zoom" aria-pressed="false" hidden>🔍 2×</button>
+    <button id="scan-ende" style="grid-column: 3">Abbrechen</button>
+  </div>
+</dialog>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+// Gleiche Logik wie beschreibung.py der Desktop-Version
+const MAX_LAENGE = 4000, MAX_FOTOS = 20;
+const HAFTUNGSAUSSCHLUSS = 'Privatverkauf: Der Verkauf erfolgt unter Ausschluss jeglicher Sachmängelhaftung. ' +
+  'Keine Garantie, keine Rücknahme. Die Haftung auf Schadensersatz wegen Verletzung ' +
+  'von Leben, Körper oder Gesundheit sowie bei grob fahrlässiger oder vorsätzlicher ' +
+  'Pflichtverletzung bleibt davon unberührt.';
+// Bezeichnungen für Buch / Musik / Film
+const MUSIK = ['CD', 'Schallplatte'], FILM = ['DVD', 'Blu-ray'];
+const BEZ = {
+  autor: a => MUSIK.includes(a.medium) ? 'Interpret' : FILM.includes(a.medium) ? 'Regie / Darsteller' : 'Autor',
+  verlag: a => MUSIK.includes(a.medium) ? 'Label' : FILM.includes(a.medium) ? 'Studio / Label' : 'Verlag',
+  isbn: a => /^97[89]\d{10}$/.test((a.isbn || '').replace(/\D/g, '')) && !MUSIK.concat(FILM).includes(a.medium) ? 'ISBN' : 'EAN',
+};
+const FELDER = [['medium', 'Format'], ['autor', BEZ.autor], ['verlag', BEZ.verlag], ['ausgabe', 'Ausgabe'], ['isbn', BEZ.isbn],
+  ['marke', 'Marke / Hersteller'], ['modell', 'Modell / Typ'], ['zustand', 'Zustand'],
+  ['alter', 'Alter / gekauft'], ['masse', 'Maße / Größe'], ['farbe', 'Farbe'], ['lieferumfang', 'Lieferumfang'],
+  ['maengel', 'Gebrauchsspuren / Mängel'], ['grund', 'Grund des Verkaufs']];
+const BEISPIEL = { freitext: 'Gepflegtes Damenrad, wurde regelmäßig gewartet.', marke: 'Gazelle', modell: 'Orange C7',
+  zustand: 'Gut', masse: '28 Zoll, RH 53 cm', versand: 'Nur Abholung.', nichtraucher: true };
+
+function erzeuge(a) {
+  const teile = [];
+  const freitext = (a.freitext || '').trim();
+  if (freitext) teile.push(freitext);
+  const zeilen = FELDER.filter(([k]) => (a[k] || '').trim() && !(k === 'medium' && a.medium === 'Buch'))
+    .map(([k, b]) => `${typeof b === 'function' ? b(a) : b}: ${a[k].trim()}`);
+  if (zeilen.length) teile.push(zeilen.join('\n'));
+  const hinweise = [];
+  if ((a.versand || '').trim()) hinweise.push(a.versand.trim());
+  if (a.nichtraucher && a.tierfrei) hinweise.push('Aus einem Nichtraucher- und tierfreien Haushalt.');
+  else if (a.nichtraucher) hinweise.push('Aus einem Nichtraucherhaushalt.');
+  else if (a.tierfrei) hinweise.push('Aus einem tierfreien Haushalt.');
+  if (hinweise.length) teile.push(hinweise.join('\n'));
+  teile.push(HAFTUNGSAUSSCHLUSS);
+  return teile.join('\n\n');
+}
+
+const $ = id => document.getElementById(id);
+const TEXTFELDER = ['titel', 'freitext', 'preis', 'preisart', ...FELDER.map(f => f[0]), 'versand'];
+const HAKEN = ['nichtraucher', 'tierfrei'];
+const BLEIBEN = ['versand', 'nichtraucher', 'tierfrei', 'preisart']; // bleiben bei „Neue Anzeige“ erhalten
+const SPEICHER = 'kleinanzeigen-entwurf';
+
+function angaben() {
+  const a = {};
+  TEXTFELDER.forEach(k => a[k] = $(k).value);
+  HAKEN.forEach(k => a[k] = $(k).checked);
+  return a;
+}
+function istLeer(a) {
+  return !a.titel.trim() && !a.freitext.trim() && FELDER.every(([k]) => !a[k].trim());
+}
+
+function speichern() {
+  try { localStorage.setItem(SPEICHER, JSON.stringify(angaben())); } catch (e) {}
+}
+function laden() {
+  let a = null;
+  try { a = JSON.parse(localStorage.getItem(SPEICHER) || 'null'); } catch (e) {}
+  if (!a) return;
+  TEXTFELDER.forEach(k => { if (a[k] != null) $(k).value = a[k]; });
+  HAKEN.forEach(k => $(k).checked = !!a[k]);
+}
+
+function aktualisiere() {
+  const a = angaben();
+  const beispiel = istLeer(a);
+  const text = erzeuge(beispiel ? BEISPIEL : a);
+  const ende = text.length - HAFTUNGSAUSSCHLUSS.length;
+  const v = $('vorschau');
+  v.textContent = text.slice(0, ende);
+  const h = document.createElement('span');
+  h.className = 'haftung'; h.textContent = HAFTUNGSAUSSCHLUSS;
+  v.append(h);
+  $('beispiel-marke').hidden = !beispiel;
+  const tz = $('text-zaehler');
+  tz.textContent = `${text.length} / ${MAX_LAENGE} Zeichen`;
+  tz.classList.toggle('zuviel', text.length > MAX_LAENGE);
+  const t = $('titel-zaehler');
+  t.textContent = `${a.titel.trim().length} / 65`;
+  t.classList.toggle('zuviel', a.titel.trim().length > 0 && a.titel.trim().length < 10);
+  $('preis').disabled = a.preisart === 'Zu verschenken';
+  $('l-autor').textContent = BEZ.autor(a);
+  $('l-verlag').textContent = BEZ.verlag(a);
+  const code = a.isbn.replace(/\D/g, '');
+  $('code-label').textContent = code ? BEZ.isbn(a) : 'ISBN / EAN';
+  $('websuche').hidden = code.length < 8;
+  $('websuche').href = `https://www.google.com/search?q=${code}`;
+  speichern();
+}
+
+let toastUhr;
+function melde(text) {
+  const t = $('toast');
+  t.textContent = text; t.hidden = false;
+  clearTimeout(toastUhr); toastUhr = setTimeout(() => t.hidden = true, 2400);
+}
+
+async function kopiere(text, was) {
+  try {
+    await navigator.clipboard.writeText(text);
+    melde(`${was} kopiert`);
+  } catch (e) {
+    // Rückfall: Text markieren und klassisch kopieren
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.append(ta); ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (e2) {}
+    ta.remove();
+    melde(ok ? `${was} kopiert` : 'Kopieren nicht möglich – bitte Text in der Vorschau lange drücken und kopieren');
+  }
+}
+
+$('k-titel').addEventListener('click', () => {
+  const t = $('titel').value.trim();
+  if (t.length < 10) return melde('Der Titel braucht mindestens 10 Zeichen.');
+  kopiere(t, 'Titel');
+});
+$('k-text').addEventListener('click', () => {
+  const a = angaben();
+  if (istLeer(a)) return melde('Bitte zuerst Angaben eintragen – die Vorschau zeigt nur ein Beispiel.');
+  const text = erzeuge(a);
+  if (text.length > MAX_LAENGE) return melde(`Die Beschreibung ist länger als ${MAX_LAENGE} Zeichen.`);
+  kopiere(text, 'Beschreibung');
+});
+$('k-preis').addEventListener('click', () => {
+  const a = angaben();
+  if (a.preisart === 'Zu verschenken') return melde('Zu verschenken – kein Preis nötig.');
+  const p = a.preis.replace(/[^\d,.]/g, '').replace(/\./g, '').replace(',', '.');
+  if (!p || isNaN(+p)) return melde('Bitte einen Preis eintragen.');
+  kopiere(String(Math.round(+p)), `Preis (${a.preisart})`);
+});
+
+let neuBestaetigen = false;
+$('neu').addEventListener('click', () => {
+  if (!neuBestaetigen) {
+    neuBestaetigen = true;
+    $('neu').textContent = 'Wirklich alles leeren? Nochmal tippen';
+    setTimeout(() => { neuBestaetigen = false; $('neu').textContent = 'Neue Anzeige beginnen'; }, 4000);
+    return;
+  }
+  neuBestaetigen = false;
+  $('neu').textContent = 'Neue Anzeige beginnen';
+  TEXTFELDER.filter(k => !BLEIBEN.includes(k)).forEach(k => $(k).value = '');
+  fotos.forEach(f => URL.revokeObjectURL(f.url)); fotos = []; letzteAuto = {};
+  zeigeFotos(); aktualisiere(); window.scrollTo({ top: 0 });
+  melde('Neue Anzeige – Versand und Haushalt bleiben eingestellt');
+});
+
+// ---------- Fotos ----------
+let fotos = []; // {datei, url}
+const kannTeilen = f => { try { return !!navigator.canShare && navigator.canShare({ files: f }); } catch (e) { return false; } };
+
+$('foto-wahl').addEventListener('change', e => {
+  const neu = [...e.target.files];
+  e.target.value = '';
+  const platz = MAX_FOTOS - fotos.length;
+  neu.slice(0, platz).forEach(datei => fotos.push({ datei, url: URL.createObjectURL(datei) }));
+  if (neu.length > platz) melde(`Höchstens ${MAX_FOTOS} Fotos – ${neu.length - platz} nicht übernommen.`);
+  zeigeFotos();
+});
+
+function zeigeFotos() {
+  const box = $('fotos');
+  box.replaceChildren(...fotos.map((f, i) => {
+    const el = document.createElement('div');
+    el.className = 'foto';
+    el.innerHTML = `<img alt=""><span class="nr">${i + 1}</span><div class="leiste">
+      <button aria-label="Nach vorne" ${i === 0 ? 'disabled' : ''}>◀</button>
+      <button aria-label="Entfernen">✕</button>
+      <button aria-label="Nach hinten" ${i === fotos.length - 1 ? 'disabled' : ''}>▶</button></div>`;
+    el.querySelector('img').src = f.url;
+    el.querySelector('img').alt = `Foto ${i + 1}: ${f.datei.name}`;
+    const [vor, weg, zurueck] = el.querySelectorAll('button');
+    vor.onclick = () => { [fotos[i - 1], fotos[i]] = [fotos[i], fotos[i - 1]]; zeigeFotos(); };
+    zurueck.onclick = () => { [fotos[i + 1], fotos[i]] = [fotos[i], fotos[i + 1]]; zeigeFotos(); };
+    weg.onclick = () => { URL.revokeObjectURL(f.url); fotos.splice(i, 1); zeigeFotos(); };
+    return el;
+  }));
+  $('foto-zaehler').textContent = fotos.length ? `(${fotos.length} / ${MAX_FOTOS}, Nr. 1 = Titelbild)` : '(max. 20, Nr. 1 = Titelbild)';
+  $('fotos-teilen').hidden = !(fotos.length && kannTeilen(fotos.map(f => f.datei)));
+}
+
+$('fotos-teilen').addEventListener('click', async () => {
+  try {
+    await navigator.share({ files: fotos.map(f => f.datei), title: $('titel').value.trim() });
+  } catch (e) {
+    if (e.name !== 'AbortError') melde('Teilen ist hier nicht möglich – Fotos bitte in der Kleinanzeigen-App aus der Galerie wählen.');
+  }
+});
+
+// ---------- ISBN-Scanner ----------
+// Prüfziffer für EAN-8, UPC-A (12) und EAN-13
+function gtinPruef(body) {
+  let sum = 0;
+  for (let i = 0; i < body.length; i++) sum += (+body[body.length - 1 - i]) * (i % 2 ? 1 : 3);
+  return (10 - sum % 10) % 10;
+}
+// Prüft einen Barcode; ISBN-10 wird in ISBN-13 umgewandelt. Ungültig → null
+function normCode(s) {
+  s = String(s || '').replace(/[^0-9Xx]/g, '').toUpperCase();
+  if (/^\d{9}[\dX]$/.test(s)) {
+    const sum = [...s].reduce((a, c, i) => a + (c === 'X' ? 10 : +c) * (10 - i), 0);
+    if (sum % 11) return null;
+    const z = '978' + s.slice(0, 9);
+    return z + gtinPruef(z);
+  }
+  if (/^(\d{8}|\d{12}|\d{13})$/.test(s)) return gtinPruef(s.slice(0, -1)) === +s.slice(-1) ? s : null;
+  return null;
+}
+const istISBN = c => /^97[89]\d{10}$/.test(c);
+
+const video = $('scan-video');
+let strom = null, detektor = null, lauf = 0, laeuft = false;
+
+async function holeDetektor() {
+  const FORMATE = ['ean_13', 'upc_a', 'ean_8'];
+  if ('BarcodeDetector' in window) {
+    try {
+      const f = await BarcodeDetector.getSupportedFormats();
+      if (f.includes('ean_13')) return new BarcodeDetector({ formats: FORMATE.filter(x => f.includes(x)) });
+    } catch (e) {}
+  }
+  // Rückfall für Browser ohne eingebaute Barcode-Erkennung
+  const m = await import('https://fastly.jsdelivr.net/npm/barcode-detector@2/dist/es/pure.min.js');
+  return new m.BarcodeDetector({ formats: FORMATE });
+}
+function spur() { return strom && strom.getVideoTracks()[0]; }
+
+async function scanStart() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)
+    return melde('Kamera nicht verfügbar – die Seite muss über https geöffnet werden.');
+  const dlg = $('scanner');
+  $('scan-rahmen').classList.remove('treffer');
+  $('scan-text').textContent = 'Kamera wird gestartet …';
+  dlg.showModal();
+  const meins = ++lauf;
+  try {
+    if (!detektor) detektor = await holeDetektor();
+    strom = await navigator.mediaDevices.getUserMedia({ audio: false,
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } });
+  } catch (e) {
+    scanStopp();
+    return melde(e.name === 'NotAllowedError' ? 'Kamerazugriff wurde nicht erlaubt.' : 'Kamera konnte nicht gestartet werden.');
+  }
+  if (meins !== lauf) { strom.getTracks().forEach(t => t.stop()); return; }
+  video.srcObject = strom;
+  try { await video.play(); } catch (e) {}
+  const t = spur(), cap = (t.getCapabilities && t.getCapabilities()) || {};
+  if (cap.focusMode && cap.focusMode.includes('continuous'))
+    t.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => {});
+  $('scan-licht').hidden = !cap.torch;
+  $('scan-zoom').hidden = !(cap.zoom && cap.zoom.max >= 2);
+  $('scan-text').textContent = 'Barcode in den Rahmen halten (ca. 15–25 cm Abstand)';
+  laeuft = true;
+  suche(meins);
+}
+
+async function suche(meins) {
+  if (!laeuft || meins !== lauf) return;
+  if (video.readyState >= 2) {
+    try {
+      for (const c of await detektor.detect(video)) {
+        const i = normCode(c.rawValue);
+        if (i && laeuft && meins === lauf) return treffer(i);
+      }
+    } catch (e) {}
+  }
+  setTimeout(() => suche(meins), 120);
+}
+
+function treffer(isbn) {
+  laeuft = false;
+  if (navigator.vibrate) navigator.vibrate(80);
+  $('scan-rahmen').classList.add('treffer');
+  $('scan-text').textContent = `${istISBN(isbn) ? 'ISBN' : 'EAN'} ${isbn} erkannt`;
+  setTimeout(scanStopp, 350);
+  nachschlagen(isbn);
+}
+
+function scanStopp() {
+  laeuft = false; lauf++;
+  if (strom) strom.getTracks().forEach(t => t.stop());
+  strom = null; video.srcObject = null;
+  ['scan-licht', 'scan-zoom'].forEach(k => $(k).setAttribute('aria-pressed', 'false'));
+  if ($('scanner').open) $('scanner').close();
+}
+
+function umschalten(knopf, wert) {
+  const an = knopf.getAttribute('aria-pressed') !== 'true';
+  const t = spur(); if (!t) return;
+  t.applyConstraints({ advanced: [wert(an, t.getCapabilities())] })
+    .then(() => knopf.setAttribute('aria-pressed', String(an)))
+    .catch(() => melde('Wird von dieser Kamera nicht unterstützt.'));
+}
+$('scan-licht').addEventListener('click', e => umschalten(e.currentTarget, an => ({ torch: an })));
+$('scan-zoom').addEventListener('click', e => umschalten(e.currentTarget, (an, cap) => ({ zoom: an ? 2 : (cap.zoom.min || 1) })));
+$('scan-start').addEventListener('click', scanStart);
+$('scan-ende').addEventListener('click', scanStopp);
+$('scanner').addEventListener('close', scanStopp);
+document.addEventListener('visibilitychange', () => { if (document.hidden && $('scanner').open) scanStopp(); });
+
+// ---------- Buchdaten nachschlagen ----------
+async function holeJSON(url) {
+  try { const r = await fetch(url); return r.ok ? await r.json() : null; } catch (e) { return null; }
+}
+async function buchdaten(isbn) {
+  const [g, o] = await Promise.all([
+    holeJSON(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`),
+    holeJSON(`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`)]);
+  const v = g && g.items && g.items[0] && g.items[0].volumeInfo;
+  const b = o && o[`ISBN:${isbn}`];
+  const a = v ? { titel: v.title, autoren: v.authors, verlag: v.publisher,
+    jahr: (v.publishedDate || '').slice(0, 4), seiten: v.pageCount } : {};
+  const z = b ? { titel: b.title, autoren: (b.authors || []).map(x => x.name), verlag: b.publishers && b.publishers[0] && b.publishers[0].name,
+    jahr: ((b.publish_date || '').match(/\d{4}/) || [])[0], seiten: b.number_of_pages } : {};
+  if (!v && !b) return null;
+  const d = {};
+  ['titel', 'autoren', 'verlag', 'jahr', 'seiten'].forEach(k => {
+    const x = a[k], y = z[k];
+    d[k] = (x && (!Array.isArray(x) || x.length)) ? x : y;
+  });
+  d.autoren = d.autoren || [];
+  return d;
+}
+
+let letzteAuto = {}; // zuletzt automatisch gesetzte Werte – nur diese oder leere Felder werden überschrieben
+function setzeAuto(feld, wert) {
+  if (!wert) return;
+  const el = $(feld);
+  if (!el.value.trim() || el.value === letzteAuto[feld]) { el.value = wert; letzteAuto[feld] = wert; }
+}
+
+// CDs, Schallplatten und Musik-DVDs/Blu-rays über MusicBrainz
+async function musikdaten(code) {
+  const v = new Set([code]);
+  if (code.length === 13 && code[0] === '0') v.add(code.slice(1));
+  if (code.length === 12) v.add('0' + code);
+  const q = [...v].map(x => `barcode:${x}`).join(' OR ');
+  const j = await holeJSON(`https://musicbrainz.org/ws/2/release/?query=${encodeURIComponent(q)}&fmt=json&limit=5`);
+  const r = j && j.releases && j.releases.find(x => v.has(x.barcode));
+  if (!r) return null;
+  const interpret = (r['artist-credit'] || [])
+    .map(c => (c.name || (c.artist && c.artist.name) || '') + (c.joinphrase || '')).join('').trim();
+  const fmt = ((r.media || [])[0] || {}).format || '';
+  const medium = /blu-ray/i.test(fmt) ? 'Blu-ray' : /dvd/i.test(fmt) ? 'DVD' : /vinyl|"/i.test(fmt) ? 'Schallplatte'
+    : /cd/i.test(fmt) ? 'CD' : '';
+  const li = (r['label-info'] || []).find(x => x.label && x.label.name);
+  return { titel: r.title, interpret: interpret === '[unknown]' ? '' : interpret, medium,
+    label: li && li.label.name, jahr: (r.date || '').slice(0, 4), discs: (r.media || []).length, titelzahl: r['track-count'] };
+}
+
+function kuerze(lang, kurz) {
+  if (lang.length <= 65) return lang;
+  return kurz.length > 65 ? kurz.slice(0, 64).trim() + '…' : kurz;
+}
+
+async function nachschlagen(code) {
+  $('isbn').value = code;
+  aktualisiere();
+  melde('Suche Angaben …');
+  if (istISBN(code)) {
+    const d = await buchdaten(code);
+    if (d && d.titel) {
+      setzeAuto('medium', 'Buch');
+      setzeAuto('titel', kuerze(d.titel + (d.autoren[0] ? ' – ' + d.autoren[0] : ''), d.titel));
+      setzeAuto('autor', d.autoren.join(', '));
+      setzeAuto('verlag', d.verlag);
+      setzeAuto('ausgabe', [d.jahr, d.seiten ? `${d.seiten} Seiten` : ''].filter(Boolean).join(', '));
+      aktualisiere();
+      return melde(`Gefunden: ${d.titel}`);
+    }
+  } else {
+    const d = await musikdaten(code);
+    if (d && d.titel) {
+      setzeAuto('medium', d.medium);
+      setzeAuto('titel', kuerze(d.interpret ? `${d.interpret} – ${d.titel}` : d.titel, d.titel));
+      setzeAuto('autor', d.interpret);
+      setzeAuto('verlag', d.label);
+      setzeAuto('ausgabe', [d.jahr, d.discs > 1 ? `${d.discs} Discs` : '',
+        d.titelzahl && !FILM.includes(d.medium) ? `${d.titelzahl} Titel` : ''].filter(Boolean).join(', '));
+      aktualisiere();
+      return melde(`Gefunden: ${d.titel}`);
+    }
+  }
+  aktualisiere();
+  melde('Keine Angaben gefunden – Barcode wurde eingetragen. Tipp: „Barcode im Web suchen“.');
+}
+
+$('isbn-suchen').addEventListener('click', () => {
+  const i = normCode($('isbn').value);
+  if (!i) return melde('Ungültiger Barcode – bitte prüfen.');
+  nachschlagen(i);
+});
+
+document.querySelectorAll('input, select, textarea').forEach(el => {
+  if (el.type !== 'file') el.addEventListener('input', aktualisiere);
+});
+laden();
+aktualisiere();
+</script>
